@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { PrismaClient } from '@prisma/client/edge'
 import { withAccelerate } from '@prisma/extension-accelerate'
 import { jwt, sign, verify } from 'hono/jwt';
-import { combineAfterGenerateHooks } from 'hono/ssg';
+import { SignInInput, SignUpInput, PostInput, UpdatePostInput  } from '@deveshsaini07/medium-common-app';
+import { signUpInput,signInInput, postInput, updatePostInput } from '@deveshsaini07/medium-common-app';
 
 const app = new Hono<{
 	Bindings: {
@@ -29,8 +30,14 @@ app.post('/api/v1/user/signup',async (c) => {
       datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const body = await c.req.json();
-    console.log(body);
+    const body:SignUpInput = await c.req.json();
+    const check = signUpInput.safeParse(body);
+    if(check.success == false){
+      c.status(403);
+      return c.json({
+        error: "error in in body of signup" 
+      })
+    }
     
     const {email,name,password} = body;
     console.log(email,name,password);
@@ -57,7 +64,14 @@ app.post('/api/v1/user/signin',async (c) => {
       datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const body = await c.req.json();
+    const body:SignInInput = await c.req.json();
+    const check = signUpInput.safeParse(body);
+    if(check.success == false){
+      c.status(403);
+      return c.json({
+        error: "error in in body of signup" 
+      })
+    }
     const {email,password} = body;
     type bodySchema = {
       id:string,
@@ -114,13 +128,17 @@ app.post('/api/v1/blog',async (c) => {
   const prisma = new PrismaClient({
     datasourceUrl:c.env?.DATABASE_URL
   }).$extends(withAccelerate()); 
-  type bodySchema = {
-    title:string,
-    content:string,
-  }
+
   try {
     const authorId = c.get('userId');
-    const body:bodySchema = await c.req.json();
+    const body:PostInput = await c.req.json();
+    const check = postInput.safeParse(body);
+    if(check.success == false){
+      c.status(403);
+      return c.json({
+        error: "error in body of post blog" 
+      })
+    }
     const {title,content} = body;
     const data = await prisma.post.create({
       data:{
@@ -146,19 +164,23 @@ app.post('/api/v1/blog',async (c) => {
     });
   }
 })
-app.put('/api/v1/blog',async (c) => {
+app.put('/api/v1/blog/:id',async (c) => {
   const prisma = new PrismaClient({
     datasourceUrl:c.env?.DATABASE_URL
-  }).$extends(withAccelerate()); 
-  type bodySchema = {
-    postId:string,
-    title:string,
-    content:string,
-  }
+  }).$extends(withAccelerate());
+
   try {
     const authorId = c.get('userId');
-    const body:bodySchema = await c.req.json();
-    const {postId,title,content} = body;
+    const postId = c.req.param('id');
+    const body:UpdatePostInput = await c.req.json();
+    const check = updatePostInput.safeParse(body);
+    if(check.success == false){
+      c.status(403);
+      return c.json({
+        error: "error in in body of update post" 
+      })
+    }
+    const {title,content} = body;
     const data = await prisma.post.update({
       where:{
         id:postId,
